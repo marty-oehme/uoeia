@@ -5,7 +5,7 @@ show_usage() {
 
 Usage: uoeia [OPTION]... [FILE|URL]
 
-Displays the specified image using the nsxiv program, or an image viewer of your choice.
+Displays the specified image using your preferred image viewer.
 
 Can open remote urls of individual images, galleries, as well as local files at the same time.
 Uses gallery-dl for remote gallery opening - so if gallery-dl can open it, so can your image viewer.
@@ -32,9 +32,6 @@ Examples:
                                             open source interface nitter.
 "
 }
-
-cache_dir="$(mktemp -d)"
-imageviewer=nsxiv
 
 die() {
     [ -n "$1" ] && printf '%s\n' "$*" >&2
@@ -88,6 +85,20 @@ dereference() {
     echo "$output"
 }
 
+get_imageviewer() {
+    if command -v nsxiv 1>/dev/null 2>&1; then
+        echo nsxiv
+    elif command -v sxiv 1>/dev/null 2>&1; then
+        echo sxiv
+    elif command -v feh 1>/dev/null 2>&1; then
+        echo feh
+    elif command -v imv 1>/dev/null 2>&1; then
+        echo imv
+    elif command -v vimiv 1>/dev/null 2>&1; then
+        echo vimiv
+    fi
+}
+
 main() {
     command -v "${imageviewer}" 1>/dev/null 2>&1 || die "Error: Opening images in ${imageviewer} requires ${imageviewer} to be installed and and on the path."
 
@@ -107,8 +118,11 @@ main() {
         ${imageviewer} "$cache_dir"
 }
 
+cache_dir="$(mktemp -d)"
+imageviewer="$(get_imageviewer)"
 gal_args=()
 replacements=()
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
     -h | --help)
