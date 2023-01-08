@@ -86,17 +86,10 @@ dereference() {
 }
 
 get_imageviewer() {
-    if command -v nsxiv 1>/dev/null 2>&1; then
-        echo nsxiv
-    elif command -v sxiv 1>/dev/null 2>&1; then
-        echo sxiv
-    elif command -v feh 1>/dev/null 2>&1; then
-        echo feh
-    elif command -v imv 1>/dev/null 2>&1; then
-        echo imv
-    elif command -v vimiv 1>/dev/null 2>&1; then
-        echo vimiv
-    fi
+    for cmd in nsxiv sxiv feh imv vimiv; do
+        if command -v "$cmd" 1>/dev/null 2>&1; then program="$cmd"; break; fi
+    done
+    echo "$program"
 }
 
 main() {
