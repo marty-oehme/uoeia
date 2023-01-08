@@ -93,6 +93,7 @@ get_imageviewer() {
 }
 
 main() {
+    [ -n "$imageviewer" ] || die "Error: Could not find a suitable image viewer, set one manually with the '-v' option."
     command -v "${imageviewer}" 1>/dev/null 2>&1 || die "Error: Opening images in ${imageviewer} requires ${imageviewer} to be installed and and on the path."
 
     trap cleanup EXIT
