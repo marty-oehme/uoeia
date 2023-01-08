@@ -40,6 +40,7 @@ die() {
 
 cleanup() {
     rm -f -- "$cache_dir"/*
+    rm -r -- "$cache_dir"
 }
 
 from_local() {
