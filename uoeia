@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+
+show_usage() {
+    printf """uoeia -- Universally Open Every Image Available
+
+Usage: uoeia [OPTION]... [FILE|URL]
+
+Displays the specified image using the nsxiv program, or an image viewer of your choice.
+
+Can open remote urls of individual images, galleries, as well as local files at the same time.
+Uses gallery-dl for remote gallery opening - so if gallery-dl can open it, so can your image viewer.
+
+Options:
+  -v, --viewer       Specify the image viewer to use (default: nsxiv).
+  -q, --quiet        Don't display any output during normal operation.
+  -g, --gdlopts      Pass through options to gallery-dl. Take care to fully quote each passed option.
+  -r, --replace      Url patterns to replace in the format 'mypattern:::myreplacement'
+  -h, --help         Show this help message and exit.
+
+Examples:
+  uoeia my-image.jpg                        Display a local image file using nsxiv.
+
+  uoeia https://example.com/image           Display an image/image gallery from a URL using nsxiv.
+
+  uoeia -v imv https://example.com/image    Display an image from a URL using imv.
+
+  uoeia -g \"--range 1-10\" https://reddit.com/r/earthporn
+                                            Download and display the first 10 results using nsxiv.
+
+  uoeia -r 'nitter.net:::twitter.com' https://nitter.net/donttrythis/
+                                            Display images from twitter directly instead of its
+                                            open source interface nitter.
+"
+}
+
+cache_dir="$(mktemp -d)"
+imageviewer=nsxiv
+
+die() {
+    [ -n "$1" ] && printf '%s\n' "$*" >&2
+    exit 1
+}
+
+cleanup() {
+    rm -f -- "$cache_dir"/*
+}
+
+from_local() {
+    fpath="$(realpath -e "$1")"
+    ln -s "$fpath" "$cache_dir"
+}
+
+# invokes single image downloading or gallery downloading depending on content type
+from_remote() {
+    link="$(dereference "$1")"
+    if curl -sLI "$link" | grep -i '^Content-Type:' | grep -q image; then
+        get_single_image "$link"
+    else
+        get_gallery "$link"
+    fi
+}
+
+get_gallery() {
+    command -v gallery-dl 1>/dev/null 2>&1 || return
+    #shellcheck disable=2068
+    gallery-dl -D "$cache_dir" ${gal_args[@]} "$1"
+}
+
+get_single_image() {
+    pwd="$PWD"
+    cd "$cache_dir" && curl -sSLO "$1"
+    cd "$pwd" || exit 1
+}
+
+# unaliases urls which will not be downloaded correctly otherwise
+dereference() {
+    local output
+    # default replacements:
+    # teddit to original redd.it hosted picture
+    output="${1//teddit.net\/pics\/w:null_/i.redd.it/}"
+    # nitter to twitter
+    output="${1//nitter.net/twitter.com}"
+
+    # custom replacements:
+    for rep in "${replacements[@]}"; do
+        output="${1//${rep%:::*}/${rep#*:::}}"
+    done
+    echo "$output"
+}
+
+main() {
+    command -v "${imageviewer}" 1>/dev/null 2>&1 || die "Opening images in ${imageviewer} requires ${imageviewer} to be installed and and on the path."
+
+    trap cleanup EXIT
+    [ -d "$cache_dir" ] || mkdir -p -- "$cache_dir" || die
+    im_number=1
+    while [ -n "$1" ]; do
+        case "$1" in
+        *://*.*) from_remote "$1" ;;
+        *) from_local "$1" ;;
+        esac
+        im_number=$((im_number + 1))
+        shift
+    done
+
+    [ "$(find -L "$cache_dir" -type f -print | wc -l)" -ne 0 ] &&
+        ${imageviewer} "$cache_dir"
+}
+
+gal_args=()
+replacements=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    -h | --help)
+        show_usage
+        exit 0
+        ;;
+    -q | --quiet)
+        gal_args+=("-q")
+        ;;
+    -v | --viewer)
+        imageviewer=$2
+        shift 2
+        ;;
+    -g | --gdlopts)
+        if [[ ! "$2" =~ ^- ]]; then
+            printf "Error: No valid option passed: %s" "$2"
+            break
+        fi
+        gal_args+=("$2")
+        shift 2
+        ;;
+    -r | --replace)
+        replacements+=("$2")
+        shift 2
+        ;;
+    --)
+        shift
+        break
+        ;;
+    *)
+        if [[ "$1" =~ ^- ]]; then
+            printf "Error: Unrecognized option: %s" "$1"
+            show_usage
+            exit 1
+        fi
+        arguments+=("$1")
+        shift
+        ;;
+    esac
+done
+arguments+=("$@")
+
+main "${arguments[@]}"
