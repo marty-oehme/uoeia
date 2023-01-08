@@ -76,11 +76,11 @@ dereference() {
     # teddit to original redd.it hosted picture
     output="${1//teddit.net\/pics\/w:null_/i.redd.it/}"
     # nitter to twitter
-    output="${1//nitter.net/twitter.com}"
+    output="${output//nitter.net/twitter.com}"
 
     # custom replacements:
     for rep in "${replacements[@]}"; do
-        output="${1//${rep%:::*}/${rep#*:::}}"
+        output="${output//${rep%:::*}/${rep#*:::}}"
     done
     echo "$output"
 }
