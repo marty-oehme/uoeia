@@ -89,10 +89,10 @@ dereference() {
 }
 
 main() {
-    command -v "${imageviewer}" 1>/dev/null 2>&1 || die "Opening images in ${imageviewer} requires ${imageviewer} to be installed and and on the path."
+    command -v "${imageviewer}" 1>/dev/null 2>&1 || die "Error: Opening images in ${imageviewer} requires ${imageviewer} to be installed and and on the path."
 
     trap cleanup EXIT
-    [ -d "$cache_dir" ] || mkdir -p -- "$cache_dir" || die
+    [ -d "$cache_dir" ] || mkdir -p -- "$cache_dir" || die "Error: Can not create cache directory {$cache_dir}"
     im_number=1
     while [ -n "$1" ]; do
         case "$1" in
