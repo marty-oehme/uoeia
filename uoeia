@@ -75,6 +75,7 @@ dereference() {
     # default replacements:
     # teddit to original redd.it hosted picture
     output="${1//teddit.net\/pics\/w:null_/i.redd.it/}"
+    output="${output//teddit.net/reddit.com}"
     # nitter to twitter
     output="${output//nitter.net/twitter.com}"
 
